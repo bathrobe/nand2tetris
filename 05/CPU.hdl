@@ -1,0 +1,100 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/05/CPU.hdl
+
+/**
+ * The Hack CPU (Central Processing unit), consisting of an ALU,
+ * two registers named A and D, and a program counter named PC.
+ * The CPU is designed to fetch and execute instructions written in 
+ * the Hack machine language. In particular, functions as follows:
+ * Executes the inputted instruction according to the Hack machine 
+ * language specification. The D and A in the language specification
+ * refer to CPU-resident registers, while M refers to the external
+ * memory location addressed by A, i.e. to Memory[A]. The inM input 
+ * holds the value of this location. If the current instruction needs 
+ * to write a value to M, the value is placed in outM, the address 
+ * of the target location is placed in the ddressM output, and the 
+ * writeM control bit is asserted. (When writeM==0, any value may 
+ * appear in outM). The outM and writeM outputs are combinational: 
+ * they are affected instantaneously by the execution of the current 
+ * instruction. The addressM and pc outputs are clocked: although they 
+ * are affected by the execution of the current instruction, they commit 
+ * to their new values only in the next time step. If reset==1 then the 
+ * CPU jumps to address 0 (i.e. pc is set to 0 in next time step) rather 
+ * than to the address resulting from executing the current instruction. 
+ * https://drive.google.com/file/d/1IsDnH0t7q_Im491LQ7_5_ajV0CokRbwR/view --IMPT : this has the API
+*/
+
+CHIP CPU {
+
+    IN  inM[16],         // M value input  (M = contents of RAM[A])
+        instruction[16], // Instruction for execution
+        reset;           // Signals whether to re-start the current
+                         // program (reset==1) or continue executing
+                         // the current program (reset==0).
+
+    OUT outM[16],        // M value output
+        writeM,          // Write to M? 
+        addressM[15],    // Address in data memory (of M)
+        pc[15];          // address of next instruction
+
+    PARTS:
+    Mux16(a=instruction,b=aluOutput,sel=instruction[15],out=aRegisterIncoming);
+    Not(in=instruction[15],out=addressInstruction);
+    Or(a=addressInstruction,b=instruction[5],out=shouldLoadARegister);
+    ARegister(in=aRegisterIncoming,load=shouldLoadARegister,out=aRegisterOutgoing, out[0..14]=addressM);
+And(a=instruction[15], b=instruction[4],out=shouldLoadD);
+    Mux16(a=aRegisterOutgoing,b=inM,sel=instruction[12],out=yValue);
+    ALU(x=dRegister,y=yValue,zx=instruction[11],nx=instruction[10],zy=instruction[9],ny=instruction[8],f=instruction[7],no=instruction[6],out=aluOutput, out=outM, zr=isItZero, ng=isItNeg);
+    DRegister(in=aluOutput,load=shouldLoadD,out=dRegister);
+
+    And(a=instruction[3],b=instruction[15],out=writeM);
+    Not(in=isItNeg,out=nonNeg);
+    Not(in=isItZero,out=nonZero);
+    And(a=nonNeg,b=nonZero,out=isPositive);
+    
+    And(a=instruction[0], b=instruction[1],out=secondJs);
+    And(a=secondJs,b=instruction[2],out=JMP);
+    /* above is an unconditionalJump */
+    Not(in=instruction[0],out=noJumpThree);
+    Not(in=instruction[1],out=noJumpTwo);
+    Not(in=instruction[2],out=noJumpOne);
+    And(a=noJumpOne,b=noJumpTwo,out=noFirstTwo);
+    And(a=noFirstTwo,b=noJumpThree,out=noJump);
+    /* above is a no jump command */
+
+    /* if out > 0 jump JGT */
+    And(a=isPositive, b=instruction[0], out=JGT);
+
+    /* if out = 0 jump JEQ */
+    And(a=isItZero, b=instruction[1], out=JEQ);
+
+    /* if out >= 0 jump JGE covered by the preceding two ==IF ERRORS TRY HARDCODING THIS?==*/
+
+    /* if out < jump JLT */
+    And(a=isItNeg,b=instruction[2],out=JLT);
+    Or(a=isItNeg, b=isItZero,out=lessthanorequal);
+    And(a=lessthanorequal, b=instruction[2], out=JLE);
+
+    /* if out is not zero jump JNE */
+    Or(a=isItNeg, b=isPositive, out=notzero);
+    And(a=instruction[0],b=instruction[2],out=jneConditions);
+    And(a=notzero, b=jneConditions, out=JNE);
+
+    /* if out <= 0 jump JLE covered by preceding atomic cases ==TRY HARDCODING IF BUGS==*/
+    /* now defining shouldJump: if any of the jump commands above are so, shouldJump is true */
+    Or(a=JMP,b=JGT,out=firstJump);
+    Or(a=firstJump,b=JEQ,out=Jtwo);
+    Or(a=Jtwo,b=JLT,out=Jthree);
+    Or(a=Jthree,b=JNE,out=jumpReady);
+    And(a=instruction[15], b=jumpReady, out=shouldJump);
+    Not(in=shouldJump, out=shouldNotJump);
+    Not(in=reset, out=shouldNotReset);
+    And(a=shouldNotJump, b=shouldNotReset, out=shouldInc);
+    PC(in=aRegisterOutgoing,load=shouldJump,inc=shouldInc,reset=reset,out[0..14]=pc); 
+    
+}
+
+
+

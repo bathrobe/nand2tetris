@@ -1,0 +1,67 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/03/a/Register.hdl
+
+/**
+ * 16-bit register:
+ * If load[t] == 1 then out[t+1] = in[t]
+ * else out does not change
+ */
+
+CHIP Register {
+    IN in[16], load;
+    OUT out[16];
+
+    PARTS:
+    Mux16(
+      a[0]=next1,
+      a[1]=next2,
+      a[2]=next3,
+      a[3]=next4,
+      a[4]=next5,
+      a[5]=next6,
+      a[6]=next7,
+      a[7]=next8,
+      a[8]=next9,
+      a[9]=next10,
+      a[10]=next11,
+      a[11]=next12,
+      a[12]=next13,
+      a[13]=next14,
+      a[14]=next15,
+      a[15]=next16,
+      b=in,sel=load,out[0]=tplus1,
+          out[1]=tplus2,
+          out[2]=tplus3,
+          out[3]=tplus4,
+          out[4]=tplus5,
+          out[5]=tplus6,
+      out[6]=tplus7,
+          out[7]=tplus8,
+          out[8]=tplus9,
+          out[9]=tplus10,
+          out[10]=tplus11,
+          out[11]=tplus12,
+          out[12]=tplus13,
+          out[13]=tplus14,
+          out[14]=tplus15,
+          out[15]=tplus16
+          );
+    DFF(in=tplus1,out=next1, out=out[0]);
+    DFF(in=tplus2,out=next2, out=out[1]);
+    DFF(in=tplus3,out=next3, out=out[2]);
+    DFF(in=tplus4,out=next4, out=out[3]);
+    DFF(in=tplus5,out=next5, out=out[4]);
+    DFF(in=tplus6,out=next6, out=out[5]);
+    DFF(in=tplus7,out=next7, out=out[6]);
+    DFF(in=tplus8,out=next8, out=out[7]);
+    DFF(in=tplus9,out=next9, out=out[8]);
+    DFF(in=tplus10,out=next10, out=out[9]);
+    DFF(in=tplus11,out=next11, out=out[10]);
+    DFF(in=tplus12,out=next12, out=out[11]);
+    DFF(in=tplus13,out=next13, out=out[12]);
+    DFF(in=tplus14,out=next14, out=out[13]);
+    DFF(in=tplus15,out=next15, out=out[14]);
+    DFF(in=tplus16,out=next16, out=out[15]);
+    }
